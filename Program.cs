@@ -27,7 +27,7 @@ public class RestaurantReservationApp
 
 public class ReservationManager
 {
-    private List<Restaurant> restaurants;
+    public List<Restaurant> restaurants;
 
     public ReservationManager()
     {

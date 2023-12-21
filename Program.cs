@@ -6,15 +6,22 @@ public class RestaurantReservationApp
 {
     static void Main(string[] args)
     {
-        var manager = new ReservationManager();
-        manager.AddRestaurant("A", 10);
-        manager.AddRestaurant("B", 5);
+        try
+        {
+            var manager = new ReservationManager();
+            manager.AddRestaurant("A", 10);
+            manager.AddRestaurant("B", 5);
 
-        var bookingResult1 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
-        var bookingResult2 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
+            var bookingResult1 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
+            var bookingResult2 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
 
-        Console.WriteLine(bookingResult1);
-        Console.WriteLine(bookingResult2);
+            Console.WriteLine(bookingResult1);
+            Console.WriteLine(bookingResult2);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Application Error: " + ex.Message);
+        }
     }
 }
 
@@ -31,6 +38,16 @@ public class ReservationManager
     {
         try
         {
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException(nameof(name), "Restaurant name cannot be empty");
+            }
+
+            if (tableCount <= 0)
+            {
+                throw new ArgumentException(nameof(tableCount), "Table count must be greater than 0");
+            }
+
             var restaurant = new Restaurant
             {
                 Name = name,
@@ -41,7 +58,7 @@ public class ReservationManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Error adding restaurant: " + ex.Message);
         }
     }
 
@@ -59,7 +76,7 @@ public class ReservationManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Error finding free tables: " + ex.Message);
             return new List<string>();
         }
     }
@@ -83,7 +100,7 @@ public class ReservationManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Error booking table: " + ex.Message);
             return false;
         }
     }
@@ -113,7 +130,7 @@ public class ReservationManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Error sorting restaurants: " + ex.Message);
         }
     }
 
@@ -125,7 +142,7 @@ public class ReservationManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Error counting available tables: " + ex.Message);
             return 0;
         }
     }
@@ -148,11 +165,33 @@ public class RestaurantTable
 
     public bool Book(DateTime date)
     {
-        return bookedDates.Add(date);
+        try
+        {
+            if (bookedDates.Contains(date))
+            {
+                return false;
+            }
+
+            bookedDates.Add(date);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error booking table: " + ex.Message);
+            return false;
+        }
     }
 
     public bool IsBooked(DateTime date)
     {
-        return bookedDates.Contains(date);
+        try
+        {
+            return bookedDates.Contains(date);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error checking if table is booked: " + ex.Message);
+            return false;
+        }
     }
 }

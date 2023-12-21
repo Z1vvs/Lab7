@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class RestaurantReservationApp
 {
     static void Main(string[] args)
     {
-        ReservationManager manager = new ReservationManager();
+        var manager = new ReservationManager();
         manager.AddRestaurant("A", 10);
         manager.AddRestaurant("B", 5);
 
-        Console.WriteLine(manager.BookTable("A", new DateTime(2023, 12, 25), 3));
-        Console.WriteLine(manager.BookTable("A", new DateTime(2023, 12, 25), 3));
+        var bookingResult1 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
+        var bookingResult2 = manager.BookTable("A", new DateTime(2023, 12, 25), 3);
+
+        Console.WriteLine(bookingResult1);
+        Console.WriteLine(bookingResult2);
     }
 }
 
@@ -27,14 +31,11 @@ public class ReservationManager
     {
         try
         {
-            Restaurant restaurant = new Restaurant();
-            restaurant.Name = name;
-            restaurant.Tables = new RestaurantTable[tableCount];
-
-            for (int i = 0; i < tableCount; i++)
+            var restaurant = new Restaurant
             {
-                restaurant.Tables[i] = new RestaurantTable();
-            }
+                Name = name,
+                Tables = Enumerable.Range(0, tableCount).Select(_ => new RestaurantTable()).ToArray()
+            };
 
             restaurants.Add(restaurant);
         }
@@ -48,20 +49,13 @@ public class ReservationManager
     {
         try
         {
-            List<string> freeTables = new List<string>();
-
-            foreach (var restaurant in restaurants)
-            {
-                for (int i = 0; i < restaurant.Tables.Length; i++)
-                {
-                    if (!restaurant.Tables[i].IsBooked(date))
-                    {
-                        freeTables.Add($"{restaurant.Name} - Table {i + 1}");
-                    }
-                }
-            }
-
-            return freeTables;
+            return restaurants
+                .SelectMany(restaurant => restaurant.Tables
+                    .Select((table, index) => new { Restaurant = restaurant, TableIndex = index, Table = table })
+                    .Where(entry => !entry.Table.IsBooked(date))
+                    .Select(entry => $"{entry.Restaurant.Name} - Table {entry.TableIndex + 1}")
+                )
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -72,20 +66,26 @@ public class ReservationManager
 
     public bool BookTable(string restaurantName, DateTime date, int tableNumber)
     {
-        foreach (var restaurant in restaurants)
+        try
         {
-            if (restaurant.Name == restaurantName)
+            var restaurant = restaurants.FirstOrDefault(r => r.Name == restaurantName);
+            if (restaurant == null)
             {
-                if (tableNumber < 0 || tableNumber >= restaurant.Tables.Length)
-                {
-                    throw new ArgumentException("Invalid table number");
-                }
-
-                return restaurant.Tables[tableNumber].Book(date);
+                throw new ArgumentException(nameof(restaurantName), "Restaurant not found");
             }
-        }
 
-        throw new ArgumentException("Restaurant not found");
+            if (tableNumber < 0 || tableNumber >= restaurant.Tables.Length)
+            {
+                throw new ArgumentException(nameof(tableNumber), "Invalid table number");
+            }
+
+            return restaurant.Tables[tableNumber].Book(date);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+            return false;
+        }
     }
 
     public void SortRestaurantsByAvailability(DateTime date)
@@ -121,17 +121,7 @@ public class ReservationManager
     {
         try
         {
-            int count = 0;
-
-            foreach (var table in restaurant.Tables)
-            {
-                if (!table.IsBooked(date))
-                {
-                    count++;
-                }
-            }
-
-            return count;
+            return restaurant.Tables.Count(table => !table.IsBooked(date));
         }
         catch (Exception ex)
         {
@@ -143,36 +133,22 @@ public class ReservationManager
 
 public class Restaurant
 {
-    public string Name;
-    public RestaurantTable[] Tables;
+    public string Name { get; set; }
+    public RestaurantTable[] Tables { get; set; }
 }
 
 public class RestaurantTable
 {
-    private List<DateTime> bookedDates;
+    private HashSet<DateTime> bookedDates;
 
     public RestaurantTable()
     {
-        bookedDates = new List<DateTime>();
+        bookedDates = new HashSet<DateTime>();
     }
 
     public bool Book(DateTime date)
     {
-        try
-        {
-            if (bookedDates.Contains(date))
-            {
-                return false;
-            }
-
-            bookedDates.Add(date);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Error: " + ex.Message);
-            return false;
-        }
+        return bookedDates.Add(date);
     }
 
     public bool IsBooked(DateTime date)
